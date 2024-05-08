@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta http-equiv="X-UA-Compatible" content="IE=edge">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+        <title>DocAI</title>
+        <link rel="stylesheet" href="static\styles.css">
+		<link rel="manifest" href="static/img/site.webmanifest">
+	
+		<script src="static\icons.js"></script>
+		<script src="static/highlight.min.js"></script>
+		<script src="static/highlightjs-copy.min.js"></script>
+		
+		<style>
+											.modal {
+					display: none; /* Hide modal by default */
+					position: fixed; /* Position the modal relative to the viewport */
+					z-index: 1; /* Set z-index to display modal above other elements */
+					top: 50%; /* Center vertically */
+					left: 50%; /* Center horizontally */
+					transform: translate(-50%, -50%); /* Move the modal back by half of its width and height */
+					width: 100%; /* Full width */
+					height: 100%; /* Full height */
+					background-color: rgba(0, 0, 0, 0.5); /* Semi-transparent black background */
+					overflow: auto; /* Enable scrolling if needed */
+					}
+
+					/* Modal content */
+					.modal-content {
+					background-color: rgba(255, 255, 255, 0.8); /* Semi-transparent white background */
+					position: absolute; /* Position the modal content */
+					top: 50%; /* Center vertically */
+					left: 50%; /* Center horizontally */
+					transform: translate(-50%, -50%); /* Move content back by half of its width and height */
+					padding: 20px;
+					border-radius: 20px;
+					height: 500px; /* Set height of modal */
+					width: 500px; /* Set width of modal */
+					box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2); /* Add shadow */
+					}
+
+
+				/* Close button */
+				.close {
+				color: #aaa;
+				float: right;
+				font-size: 28px;
+				font-weight: bold;
+				cursor: pointer;
+				}
+
+				.close:hover,
+				.close:focus {
+				color: black;
+				text-decoration: none;
+				}
+
+				#camera-feed {
+				margin: 0 auto;
+				width: 450px; /* Occupy 100% of the width */
+				height: 400px; /* Occupy 100% of the height */
+				border-radius: 50px; /* Apply curved edges */
+				object-fit: cover;
+				padding: 10px 20px; /* Maintain aspect ratio and cover entire container */
+				}
+				/* Button styles */
+				.button {
+				padding: 10px 20px; /* Add padding */
+				background-color: #4CAF50; /* Green background color */
+				color: white; /* White text color */
+				border: none; /* Remove border */
+				border-radius: 5px; /* Apply rounded corners */
+				cursor: pointer; /* Add cursor pointer */
+				display: block; /* Set display to block */
+				margin: 0 auto; /* Center align */
+				}
+
+				/* Hover effect */
+				.button:hover {
+				background-color: #4549a0; /* Darker green on hover */
+				}
+
+		</style>
+		<style>
+			/* Base styles for the button */
+			#send {
+				background-color: #35363d00; /* Button background color */
+				color: white; /* Text color */
+				border: none;
+				border-radius: 5px;
+				padding: 10px 15px;
+				font-size: 16px;
+				cursor: pointer;
+				transition: background-color 0.3s;
+			}
+	
+			/* Hover effect */
+			#send:hover {
+				background-color: #d0d0d0; /* Darker shade of the button color on hover */
+			}
+	
+			/* Styles for the paper plane icon */
+			#send .fa-paper-plane-top {
+				margin-right: 5px; /* Space between the paper plane icon and the camera icon */
+			}
+	
+			/* Styles for the camera icon */
+			#send .fa-camera {
+				margin-left: 5px; /* Space between the camera icon and the paper plane icon */
+			}
+		</style>
+					<script>
+						function openModal() {
+				document.getElementById("myModal").style.display = "block";
+				startCamera();
+			}
+
+			function closeModal() {
+				document.getElementById("myModal").style.display = "none";
+				stopCamera();
+			}
+
+			function startCamera() {
+				navigator.mediaDevices.getUserMedia({ video: true })
+					.then(stream => {
+						const videoElement = document.getElementById("camera-feed");
+						videoElement.srcObject = stream;
+					})
+					.catch(error => {
+						console.error("Error accessing camera:", error);
+						closeModal();
+					});
+			}
+
+			function stopCamera() {
+				const videoElement = document.getElementById("camera-feed");
+				const stream = videoElement.srcObject;
+				if (stream) {
+					const tracks = stream.getTracks();
+					tracks.forEach(track => track.stop());
+					videoElement.srcObject = null;
+				}
+			}
+
+			function takePicture() {
+				const videoElement = document.getElementById("camera-feed");
+				const canvas = document.createElement("canvas");
+				canvas.width = videoElement.videoWidth;
+				canvas.height = videoElement.videoHeight;
+				const ctx = canvas.getContext("2d");
+				ctx.drawImage(videoElement, 0, 0, canvas.width, canvas.height);
+				const imageDataURL = canvas.toDataURL("image/png");
+
+				sendImageToServer(imageDataURL);
+			}
+
+							function sendImageToServer(imageDataURL) {
+					var blob = dataURLtoBlob(imageDataURL);
+
+					var formData = new FormData();
+					formData.append('image', blob);
+
+					fetch('/process-image', {
+						method: 'POST',
+						body: formData
+					})
+					.then(response => response.json())
+					.then(data => {
+						console.log(data);
+						closeModal();
+					})
+					.catch(error => {
+						console.error('Error:', error);
+						alert('Error sending image to server. Please check console for details.');
+					});
+				}
+
+				function dataURLtoBlob(dataURL) {
+					var parts = dataURL.split(';base64,');
+					var contentType = parts[0].split(':')[1];
+					var raw = window.atob(parts[1]);
+					var rawLength = raw.length;
+					var uInt8Array = new Uint8Array(rawLength);
+
+					for (var i = 0; i < rawLength; ++i) {
+						uInt8Array[i] = raw.charCodeAt(i);
+					}
+
+					return new Blob([uInt8Array], { type: contentType });
+				}
+
+
+						</script>
+					
+		<script>
+						window.onload = function() {
+				const textarea = document.getElementById('message-input');
+				const messagesTextarea = document.getElementById('messages');
+				const sendButton = document.getElementById('send');
+
+
+				sendButton.addEventListener('click', sendMessage);
+
+				textarea.addEventListener('keypress', function(event) {
+					if (event.key === 'Enter') {
+						event.preventDefault(); 
+						sendMessage();
+					}
+				});
+
+				function sendMessage() {
+					const value = textarea.value;
+					appendMessage(value);
+					sendDataToPython(value);
+					textarea.value = '';
+				}
+
+				
+
+				function appendMessage(message) {
+					messagesTextarea.value += '\n' + message + '\n';
+				}
+				
+
+
+				function sendDataToPython(userInput) {
+					var data = {
+						userInput: userInput
+					};
+
+					var xml = new XMLHttpRequest();
+					xml.open("POST", "/generate-content", true);
+					xml.setRequestHeader("Content-type", "application/json");
+
+					xml.onload = function() {
+    if (xml.status === 200) {
+        var responseData = JSON.parse(xml.responseText);
+        const value = responseData.message;
+        
+        var messagesTextarea = document.getElementById('messages');
+
+        if (messagesTextarea) {
+            // Append the generated content to the textarea
+            messagesTextarea.value += '\n' + value + '\n';
+        } else {
+            console.error("Textarea with ID 'messages' not found.");
+        }
+
+        console.log("Generated content from Python:", responseData.message);
+       
+    } else {
+        console.error("Error:", xml.statusText);
+    }
+};
+
+
+					// Send the JSON data to the server
+					xml.send(JSON.stringify(data));
+				}
+
+							function sendImageToServer(imageDataURL) {
+				var formData = new FormData();
+				formData.append('image', imageDataURL);
+
+				fetch('/process-image', {
+					method: 'POST',
+					body: formData
+				})
+				.then(response => response.json())
+				.then(data => {
+					console.log(data);
+					var generatedContent = data.message;
+					// Fill the input box with the generated content
+					document.getElementById('message-input').value = generatedContent;
+					// Call the function to send data to Python with the generated content
+					sendDataToPython(generatedContent);
+				})
+				.catch(error => {
+					console.error('Error:', error);
+					alert('Error sending image to server. Please check console for details.');
+				});
+							}
+
+
+
+							
+							
+
+							
+						};
+			
+
+		</script>
+		
+
+		<script >
+			// Get the modal and close button
+		const modal = document.getElementById("myModal");
+		const closeButton = document.getElementsByClassName("close")[0];
+
+		// Open the modal when the open button is clicked
+		document.getElementById("openModalButton").onclick = function() {
+		modal.style.display = "block";
+		}
+
+		// Close the modal when the close button is clicked
+		closeButton.onclick = function() {
+		modal.style.display = "none";
+		}
+
+		window.onclick = function(event) {
+		if (event.target == modal) {
+		modal.style.display = "none";
+		}
+		}
+
+		</script>
+    </head>
+    <body>
+		<div class="BG">
+			<img src=static\Background.jpg alt="image" class="BG"> </div>
+        <div class="row">
+            <div class="box conversations">
+				<div class="logo">
+					<img src="static\DocAi_transparent.png" alt="logoo">
+				</div>
+                    <div class="bottom_buttons" id="pR">
+                       <button> 
+							<i class="fa-regular fa-upload"></i>
+							<span>Load Chat</span>
+						</button>
+					</div>
+					
+					<div id="sMes" style="margin-top: 100px;"></div>
+					
+                    <div class="top">
+						<div class="spinner"></div>		
+					</div>
+					
+					<div class="bottom_buttons">
+					
+						<button onclick="cleanDynamicDiv()">
+							<i class="fa-regular fa-trash"></i>
+							<span>Clear</span>
+						</button>
+						
+						<div class="info">
+							<i class="fa-regular fa-circle-info"></i>
+							<span class="convo-title">
+								By Group : 138
+							</span>
+						</div>
+						
+					</div>
+            </div>
+			
+            <div class="conversation">
+                <div class="stop_generating stop_generating-hidden">
+                       <button id="cancelButton">
+                        <span>Stop</span>
+                        <i class="fa-regular fa-stop"></i>
+                    </button>
+                </div>
+				
+				<textarea class="box" id="messages" contenteditable="true"></textarea>
+				<div id="messages-container"></div> <!-- Container for output messages -->
+
+				</textarea>
+				
+				<div class="user-input">
+					<div class="box input-box">
+						<textarea id="message-input" placeholder="Hello, friend! How can I help you?" style="white-space: pre-wrap; color: white;"></textarea>
+						<button id="send" onclick="sendDataToPython()">
+							<i class="fa-regular fa-paper-plane-top"></i>
+						</button>
+						<button id="open-modal-button" onclick="openModal()">
+							<i class="fa fa-camera-retro" aria-hidden="true"></i>
+						</button>
+					</div>
+				</div>
+
+				<div id="myModal" class="modal">
+					<!-- Modal content -->
+					<div class="modal-content">
+					  <span class="close" onclick="closeModal()">&times;</span> <!-- Close button -->
+					  <video id="camera-feed" autoplay></video> <!-- Video element for camera feed -->
+					  <button class="button" onclick="takePicture()">Take Picture</button>
+					  
+					</div>
+				  </div>
+			  
+				<div class="bottom_buttons">
+					<div class="field">
+						<input type="checkbox" id="theme-switch">
+						<label for="theme-switch"></label>
+						<span class="about">Change Theme</span>
+						
+						<button onclick="savePage()" style="width:175px; margin-left:10px;">
+							<i style="font-size:18px" class="fa">&#xf013;</i>
+							<span>Settings</span>
+						</button>
+						
+						
+						<button onclick="savePage()" style="width:175px; margin-left:10px;">
+							<i class="fa-regular fa-floppy-disk fa-lg"></i>
+							<span>Save Chat</span>
+						</button>
+					</div>
+			
+					
+			
+				
+					<div class="field" style="display:none">
+						<form class="color-picker">
+							<fieldset>
+								<label for="light" class="visually-hidden">Light</label>
+								<input type="radio" title="light" name="theme" id="light" checked>
+								<label for="dark" class="visually-hidden">Dark theme</label>
+								<input type="radio" title="dark" id="dark" name="theme">
+							</fieldset>
+						</form>
+					</div>
+               </div>
+			   
+            </div>
+        </div>
+		
+        <div class="mobile-sidebar">
+            <i class="fa-solid fa-bars"></i>
+        </div>
+	</div>
+</body>
+</html>
